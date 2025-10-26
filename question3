@@ -1,0 +1,53 @@
+#include <iostream>
+#include <string>
+using namespace std;
+
+struct Order {
+    int id;
+    string item;
+    int qty;
+};
+
+class Queue {
+    Order *arr;
+    int head, tail, count, cap;
+public:
+    Queue(int c=4){cap=c;arr=new Order[c];head=tail=count=0;}
+    ~Queue(){delete[] arr;}
+    bool empty(){return count==0;}
+    void resize(){
+        int nc=cap*2;
+        Order*na=new Order[nc];
+        for(int i=0;i<count;i++)na[i]=arr[(head+i)%cap];
+        delete[]arr;arr=na;cap=nc;head=0;tail=count;
+    }
+    void enqueue(Order o){
+        if(count==cap)resize();
+        arr[tail]=o;tail=(tail+1)%cap;count++;
+    }
+    bool dequeue(Order &o){
+        if(empty())return false;
+        o=arr[head];head=(head+1)%cap;count--;return true;
+    }
+    void print(){
+        for(int i=0;i<count;i++){
+            Order&o=arr[(head+i)%cap];
+            cout<<"OrderID="<<o.id<<", Item="<<o.item<<", Qty="<<o.qty<<"\n";
+        }
+    }
+};
+
+int main(){
+    Queue q;
+    q.enqueue({1,"Burger",2});
+    q.enqueue({2,"Fries",1});
+    q.enqueue({3,"Pasta",3});
+    q.enqueue({4,"Coke",2});
+    cout<<"All Orders:\n";q.print();
+    Order o;
+    cout<<"\nProcessing two orders:\n";
+    if(q.dequeue(o))cout<<"Processed: "<<o.item<<"\n";
+    if(q.dequeue(o))cout<<"Processed: "<<o.item<<"\n";
+    cout<<"\nRemaining Orders:\n";q.print();
+    return 0;
+}
