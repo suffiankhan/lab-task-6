@@ -1,0 +1,111 @@
+#include <iostream>
+#include <string>
+#include <cstdlib>
+#include <ctime>
+#include <cmath>
+using namespace std;
+
+struct Transaction {
+    int id;
+    double amount;
+    string desc;
+    int flag;
+    Transaction* next;
+    Transaction(int i=0,double a=0,string d="",int f=0):id(i),amount(a),desc(d),flag(f),next(nullptr){}
+};
+
+class Stack {
+    Transaction* top;
+    int nextId;
+public:
+    Stack(){ top=nullptr; nextId=1; }
+    void push(double amt,string desc) {
+        double a=amt;
+        if(a>=0){
+            if(a>=1500) a*=0.7;
+            else if(a>=1000) a*=0.85;
+            else if(a>=500) a*=0.95;
+        }
+        if(desc.length()>20) desc=desc.substr(0,17)+"...";
+        int f=(a>=0)?1:0;
+        Transaction*t=new Transaction(nextId++,a,desc,f);
+        t->next=top; top=t;
+    }
+    Transaction* popRefund() {
+        Transaction* prev=nullptr; Transaction* cur=top;
+        while(cur&&cur->flag!=0){prev=cur;cur=cur->next;}
+        if(!cur) return nullptr;
+        if(prev) prev->next=cur->next; else top=cur->next;
+        cur->next=nullptr;
+        cur->amount=-cur->amount;
+        cur->desc+=" [REVERSED]";
+        cur->flag=2;
+        return cur;
+    }
+    void display() {
+        Transaction* t=top;
+        while(t){
+            cout<<"[id="<<t->id<<", amt="<<fixed<<t->amount<<", desc=\""<<t->desc<<"\", flag="<<t->flag<<"]\n";
+            t=t->next;
+        }
+    }
+};
+
+int prec(char c){if(c=='+'||c=='-')return 1; if(c=='*'||c=='/')return 2; return 0;}
+bool op(char c){return c=='+'||c=='-'||c=='*'||c=='/';}
+
+string infixToPostfix(string s){
+    string out="";
+    char st[100]; int top=-1;
+    for(int i=0;i<s.size();){
+        if(s[i]==' '){i++;continue;}
+        if(isdigit(s[i])||s[i]=='.'){
+            string num="";
+            while(i<s.size()&&(isdigit(s[i])||s[i]=='.'))num+=s[i++];
+            out+=num+" ";
+        } else if(s[i]=='('){st[++top]='(';i++;}
+        else if(s[i]==')'){while(top>=0&&st[top]!='('){out+=st[top--];out+=' ';}if(top>=0&&st[top]=='(')top--;i++;}
+        else if(op(s[i])){while(top>=0&&op(st[top])&&prec(st[top])>=prec(s[i])){out+=st[top--];out+=' ';}st[++top]=s[i++];}
+        else i++;
+    }
+    while(top>=0){if(st[top]!='('){out+=st[top];out+=' ';}top--;}
+    return out;
+}
+
+double evalPostfix(string s){
+    double st[200]; int top=-1;
+    for(int i=0;i<s.size();){
+        if(s[i]==' '){i++;continue;}
+        if(isdigit(s[i])||s[i]=='.'){
+            string num="";
+            while(i<s.size()&&(isdigit(s[i])||s[i]=='.'))num+=s[i++];
+            st[++top]=atof(num.c_str());
+        } else if(op(s[i])){
+            double b=st[top--],a=st[top--];
+            if(s[i]=='+')st[++top]=a+b;
+            else if(s[i]=='-')st[++top]=a-b;
+            else if(s[i]=='*')st[++top]=a*b;
+            else if(s[i]=='/')st[++top]=a/b;
+            i++;
+        } else i++;
+    }
+    return st[top];
+}
+
+int main(){
+    srand(time(0));
+    Stack st;
+    struct T{double amt;string desc;};
+    T arr[7]={{1200,"Sale: Blue Jacket"},{450,"Sale: Cotton Socks"},{-300,"Refund: Defective Shirt"},{1700,"Sale: Leather Jacket"},{80,"Sale: Keychain"},{2600,"Sale: Premium Watch with Extra Strap"},{-150,"Refund: Wrong Size"}};
+    for(int i=0;i<4;i++){int r=rand()%7;st.push(arr[r].amt,arr[r].desc);}
+    cout<<"Pushed Transactions:\n";st.display();
+    string inf="(100 + 20) * 0.9 - 5";
+    cout<<"\nInfix: "<<inf<<"\n";
+    string post=infixToPostfix(inf);
+    cout<<"Postfix: "<<post<<"\n";
+    cout<<"Evaluated Result: "<<fixed<<evalPostfix(post)<<"\n";
+    Transaction*p=st.popRefund();
+    if(p){cout<<"\nPopped Transaction: "<<p->desc<<"\nAmount changed to "<<fixed<<p->amount<<"\nFlag updated to "<<p->flag<<"\n";delete p;}
+    cout<<"\nFinal Stack:\n";st.display();
+    return 0;
+}
